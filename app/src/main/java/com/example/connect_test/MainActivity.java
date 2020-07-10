@@ -4,10 +4,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -22,13 +20,6 @@ public class MainActivity extends AppCompatActivity {
     TextView textView; // 把視圖的元件宣告成全域變數
     String input;
     String result; // 儲存資料用的字串
-    ArrayAdapter<String> arrayAdapter;
-
-    String test = "測試";
-    int xxx = 1235;
-    void testMaster() {
-        Log.d("test","測試 master 功能");
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
