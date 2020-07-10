@@ -4,12 +4,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import java.io.BufferedReader;
@@ -19,8 +17,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     TextView textView; // 把視圖的元件宣告成全域變數
@@ -30,6 +26,9 @@ public class MainActivity extends AppCompatActivity {
 
     String test = "測試";
     int xxx = 1235;
+    void testMaster() {
+        Log.d("test","測試 master 功能");
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
