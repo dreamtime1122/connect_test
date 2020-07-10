@@ -28,6 +28,9 @@ public class MainActivity extends AppCompatActivity {
     String result; // 儲存資料用的字串
     ArrayAdapter<String> arrayAdapter;
 
+    String test = "測試";
+    int xxx = 1235;
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
 
