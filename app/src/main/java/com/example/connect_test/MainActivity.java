@@ -2,24 +2,30 @@ package com.example.connect_test;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
+import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
+    private static final Location TODO = null ;
     TextView textView; // 把視圖的元件宣告成全域變數
     String input;
     String result; // 儲存資料用的字串
+    private TextView show_loc;
+    private LocationManager mLocationManager;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -33,9 +39,15 @@ public class MainActivity extends AppCompatActivity {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String s) {
-                input = s ;
-                Thread thread = new Thread(mutiThread);
-                thread.start(); // 開始執行
+                input = s;
+                connect test_connect = new connect();
+                result = test_connect.connect_run(input);
+                // 當這個執行緒完全跑完後執行
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        textView.setText(result); // 更改顯示文字
+                    }
+                });
                 return false;
             }
 
@@ -55,66 +67,94 @@ public class MainActivity extends AppCompatActivity {
 
         // 找到視圖的元件並連接
         textView = findViewById(R.id.textView);
+        Button btnStart = (Button) findViewById(R.id.btnStart);
+        Button btnStop = (Button) findViewById(R.id.btnStop);
+        show_loc = (TextView) findViewById(R.id.text);
+        btnStart.setOnClickListener(btnClickListener); //開始定位
+        btnStop.setOnClickListener(btnClickListener); //結束定位按鈕
 
     }
-    // 建立一個執行緒執行的事件取得網路資料
-    // Android 有規定，連線網際網路的動作都不能再主線程做執行
-    // 畢竟如果使用者連上網路結果等太久整個系統流程就卡死了
-    private Runnable mutiThread = new Runnable(){
-        public void run()
-        {
-            try {
-                String data = "input="+ URLEncoder.encode(input+"", "UTF-8");
-                URL url = new URL("http://106.107.241.115/yingli/test.php");
-                // 開始宣告 HTTP 連線需要的物件，這邊通常都是一綑的
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                // 建立 Google 比較挺的 HttpURLConnection 物件
-                connection.setRequestMethod("POST");
-                // 設定連線方式為 POST
-                connection.setDoOutput(true); // 允許輸出
-                connection.setDoInput(true); // 允許讀入
-                connection.setUseCaches(false); // 不使用快取
-                connection.connect(); // 開始連線
 
-                OutputStream out = connection.getOutputStream();
-                out.write(data.getBytes());
-                out.flush();
-
-                int responseCode =
-                        connection.getResponseCode();
-                // 建立取得回應的物件
-                if(responseCode ==
-                        HttpURLConnection.HTTP_OK){
-                    // 如果 HTTP 回傳狀態是 OK ，而不是 Error
-                    InputStream inputStream =
-                            connection.getInputStream();
-                    // 取得輸入串流
-                    BufferedReader bufReader = new BufferedReader(new InputStreamReader(inputStream, "utf-8"), 8);
-                    // 讀取輸入串流的資料
-                    String box = ""; // 宣告存放用字串
-                    String line = null; // 宣告讀取用的字串
-                    while((line = bufReader.readLine()) != null) {
-                        box += line + "\n";
-                        // 每當讀取出一列，就加到存放字串後面
-                    }
-                    inputStream.close(); // 關閉輸入串流
-                    result = box; // 把存放用字串放到全域變數
-                }
-                // 讀取輸入串流並存到字串的部分
-                // 取得資料後想用不同的格式
-                // 例如 Json 等等，都是在這一段做處理
-                out.close();
-
-            } catch(Exception e) {
-                result = e.toString(); // 如果出事，回傳錯誤訊息
+    public Button.OnClickListener btnClickListener = new Button.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            Button btn = (Button) view;
+            if (btn.getId() == R.id.btnStart) {
+                if (!gpsIsOpen())
+                    return;
+                Location mLocation = getLocation();
+                if (mLocation != null)
+                    show_loc.setText("維度:" + mLocation.getLatitude() + "\n經度:" + mLocation.getLongitude());
+                else
+                    show_loc.setText("獲取不到資料");
+            } else if (btn.getId() == R.id.btnStop) {
+                mLocationManager.removeUpdates(locationListener);
             }
-
-            // 當這個執行緒完全跑完後執行
-            runOnUiThread(new Runnable() {
-                public void run() {
-                    textView.setText(result); // 更改顯示文字
-                }
-            });
         }
     };
+
+    //判斷當前是否開啟GPS
+    private boolean gpsIsOpen() {
+        boolean bRet = true;
+        LocationManager alm = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        if (!alm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            Toast.makeText(this, "未開啟GPS", Toast.LENGTH_SHORT).show();
+            bRet = false;
+        } else {
+            Toast.makeText(this, "GPS已開啟", Toast.LENGTH_SHORT).show();
+        }
+        return bRet;
     }
+
+    private Location getLocation() {
+//獲取位置管理服務
+        mLocationManager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+//查詢服務資訊
+        Criteria criteria = new Criteria();
+        criteria.setAccuracy(Criteria.ACCURACY_FINE); //定位精度: 最高
+        criteria.setAltitudeRequired(false); //海拔資訊：不需要
+        criteria.setBearingRequired(false); //方位資訊: 不需要
+        criteria.setCostAllowed(true);  //是否允許付費
+        criteria.setPowerRequirement(Criteria.POWER_LOW); //耗電量: 低功耗
+        String provider = mLocationManager.getBestProvider(criteria, true); //獲取GPS資訊
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return TODO;
+        }
+        Location location = mLocationManager.getLastKnownLocation(provider);
+        mLocationManager.requestLocationUpdates(provider, 2000, 5, locationListener);
+        return location;
+    }
+    private final LocationListener locationListener = new LocationListener()
+    {
+        public void onLocationChanged(Location location)
+        {
+// TODO Auto-generated method stub
+            if(location != null)
+                textView.setText("維度:"   +location.getLatitude()   +"\n經度:"
+                        +location.getLongitude());
+            else
+                textView.setText("獲取不到資料" );
+        }
+        public void onProviderDisabled(String provider)
+        {
+// TODO Auto-generated method stub
+        }
+        public void onProviderEnabled(String provider)
+        {
+// TODO Auto-generated method stub
+        }
+        public void onStatusChanged(String provider, int status, Bundle extras)
+        {
+// TODO Auto-generated method stub
+        }
+    };
+
+}
